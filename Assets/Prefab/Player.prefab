@@ -30,6 +30,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 5483456527003076058}
   - {fileID: 3680297100063901042}
   m_Father: {fileID: 3573415043277207326}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -46,23 +47,87 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerFeedbackController
   orientationRoot: {fileID: 4924798498595960650}
-  leanRoot: {fileID: 3680297100063901042}
   rotationSpeed: 720
   minMoveMagnitude: 0.05
-  maxLeanAngle: 18
-  leanStiffness: 140
-  leanDamping: 20
-  maxLeanVelocity: 500
+  minFaceSpeed: 0.5
+  pulseRoot: {fileID: 3680297100063901042}
+  pulseMinScale: 0.8
+  pulseMaxScale: 1.2
+  pulseFrequencyStart: 2
+  pulseFrequencyEnd: 5
+  pulseBlendSpeed: 6
   animator: {fileID: 0}
-  speedParameter: Speed
-  bombParameter: HasBomb
-  audioSource: {fileID: 0}
-  bombReceivedClip: {fileID: 0}
-  bombPassedClip: {fileID: 0}
-  explosionClip: {fileID: 0}
+  idleState: Idle
+  moveState: Move
+  idleBombState: IdleBomb
+  moveBombState: MoveBomb
+  idlePanicState: IdlePanic
+  movePanicState: MovePanic
+  pushState: Push
+  deathState: Death
+  crossFadeTime: 0.1
+  pushDuration: 0.2
+  moveSpeedThreshold: 0.3
+  walkVfx:
+    particles: {fileID: 0}
+    space: 1
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+  panicVfx:
+    particles: {fileID: 0}
+    space: 1
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+  dangerRadius: 3
   bombActiveVFX: {fileID: 0}
   explosionVFX: {fileID: 0}
+  explosionSpace: 0
+  explosionLocalPosition: {x: 0, y: 0, z: 0}
+  explosionLocalEulerAngles: {x: 0, y: 0, z: 0}
+  explosionLifetime: 5
+  audioSource: {fileID: 0}
+  walkSfx:
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    cooldown: 0.12
+    interruptPrevious: 1
+  panicSfx:
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    cooldown: 0.3
+    interruptPrevious: 1
+  tagSfx:
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    cooldown: 0.2
+    interruptPrevious: 1
+  clickSfx:
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    cooldown: 0.05
+    interruptPrevious: 1
+  explosionSfx:
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    cooldown: 0
+    interruptPrevious: 0
+  stepIntervalSlow: 0.45
+  stepIntervalFast: 0.25
+  panicSfxInterval: 0.6
+  clickInterval: 1
   bombTimerText: {fileID: 3822109081545713307}
+  timerAnchor: {fileID: 3573415043277207326}
+  timerLocalOffset: {x: 0, y: 0, z: 0}
+  timerWorldOffset: {x: 0.25, y: 0, z: 0}
+  followHeight: 0
+  timerHeight: 1.5
+  matchCameraRotation: 1
+  timerFixedEuler: {x: 90, y: 0, z: 0}
 --- !u!1 &3753210152727522540
 GameObject:
   m_ObjectHideFlags: 0
@@ -93,7 +158,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 3573415043277207326}
+  m_Father: {fileID: 4924798498595960650}
   m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -271,10 +336,11 @@ Transform:
   m_GameObject: {fileID: 6293468744602895357}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.39999962}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
-  m_Children: []
+  m_Children:
+  - {fileID: 6795227415108974872}
   m_Father: {fileID: 4924798498595960650}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &5017239346757400696
@@ -354,8 +420,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3573415043277207326}
-  - component: {fileID: 5582341746367817509}
-  - component: {fileID: 7825654135553372083}
   - component: {fileID: 7673839676784220578}
   - component: {fileID: 24476353591711379}
   - component: {fileID: 3781904382655091291}
@@ -380,67 +444,9 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 5483456527003076058}
   - {fileID: 4924798498595960650}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &5582341746367817509
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6832045250792625403}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
---- !u!23 &7825654135553372083
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6832045250792625403}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
 --- !u!135 &7673839676784220578
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -501,6 +507,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 148e6dde7f06b36fb99d9b18c8dbf053, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InputReader
+  playerIndex: 0
   stickDeadzone: 0.15
 --- !u!114 &1256404856270337727
 MonoBehaviour:
@@ -514,7 +521,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b1a109dd1053c59aaa36d5f0b4e5f7b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CharacterController
-  playerIndex: 0
   inputReader: {fileID: 3781904382655091291}
   NormalSpeed:
     speed: 6
@@ -522,12 +528,12 @@ MonoBehaviour:
     friction: 45
   BombSpeed:
     speed: 7.5
-    acceleration: 45
-    friction: 30
+    acceleration: 30
+    friction: 5
   PanicSpeed:
     speed: 9.5
-    acceleration: 25
-    friction: 14
+    acceleration: 10
+    friction: 30
   gravityScale: 2
   maxFallSpeed: 20
   groundMask:
@@ -536,8 +542,8 @@ MonoBehaviour:
   groundCheckRadius: 0.3
   groundCheckDistance: 0.1
   startWithBomb: 0
-  bombDuration: 10
-  transferCooldown: 0.4
+  bombDuration: 8
+  transferCooldown: 0.25
   panicThreshold: 0.5
   receiveBoostDuration: 0.5
   receiveBoostSpeedMultiplier: 1.35
@@ -545,4 +551,106 @@ MonoBehaviour:
   knockbackSpeed: 10
   knockbackControlLockTime: 0.25
   controlDuringKnockback: 0.15
+  destroyDelayAfterDeath: 1.5
   feedback: {fileID: 0}
+--- !u!1 &8613421669225973800
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6795227415108974872}
+  - component: {fileID: 7677719310217815289}
+  - component: {fileID: 9165622545154092003}
+  m_Layer: 0
+  m_Name: Mesh (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6795227415108974872
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8613421669225973800}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0.431}
+  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  m_ConstrainProportionsScale: 1
+  m_Children: []
+  m_Father: {fileID: 3680297100063901042}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!33 &7677719310217815289
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8613421669225973800}
+  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!137 &9165622545154092003
+SkinnedMeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8613421669225973800}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 3
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 10302, guid: 0000000000000000f000000000000000, type: 0}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  serializedVersion: 2
+  m_Quality: 0
+  m_UpdateWhenOffscreen: 0
+  m_SkinnedMotionVectors: 1
+  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  m_Bones: []
+  m_BlendShapeWeights: []
+  m_RootBone: {fileID: 0}
+  m_AABB:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
+  m_DirtyAABB: 0
