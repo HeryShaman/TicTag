@@ -1,27 +1,14 @@
 using UnityEngine;
 using TMPro;
 
-/// <summary>
-/// Hiérarchie attendue :
-///   Player (Rigidbody, Collider, HotPotatoCharacter, InputReader, PlayerFeedbackController)
-///    └ Orientation  (yaw : rotation vers la direction)         -> orientationRoot
-///       └ Lean      (pivot aux PIEDS : inclinaison + balancier) -> leanRoot
-///          └ Model  (mesh + Animator)
-/// </summary>
 public class PlayerFeedbackController : MonoBehaviour
 {
-    // =====================================================================
-    // Types utilitaires
-    // =====================================================================
-
-    /// <summary>Repère de référence pour placer un VFX.</summary>
     public enum VfxSpace
     {
         PlayerRoot,   // suit la position du joueur, ne tourne pas avec lui
         FacingRoot    // suit la position ET l'orientation (yaw) du joueur
     }
 
-    /// <summary>VFX en boucle (walk, panic) : instance de ParticleSystem présente dans le prefab.</summary>
     [System.Serializable]
     public class LoopVfx
     {
@@ -58,10 +45,6 @@ public class PlayerFeedbackController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Son d'un joueur avec protection anti-saturation :
-    /// un cooldown propre, et une "voix" dédiée (un seul exemplaire à la fois si interruptPrevious).
-    /// </summary>
     [System.Serializable]
     public class Sfx
     {
@@ -114,7 +97,6 @@ public class PlayerFeedbackController : MonoBehaviour
             return clips[i];
         }
 
-        /// <summary>Lecture sur la voix du joueur (coupée si le joueur est détruit).</summary>
         public bool TryPlay()
         {
             if (_source == null || Time.time < _nextAllowedTime) return false;
@@ -139,7 +121,6 @@ public class PlayerFeedbackController : MonoBehaviour
             return true;
         }
 
-        /// <summary>Lecture indépendante du joueur (explosion : le joueur est détruit juste après).</summary>
         public bool TryPlayDetached(Vector3 position)
         {
             if (Time.time < _nextAllowedTime) return false;
@@ -165,42 +146,28 @@ public class PlayerFeedbackController : MonoBehaviour
         }
     }
 
-    // =====================================================================
+ 
     // Orientation / Lean / Balancier
-    // =====================================================================
+
 
     [Header("Orientation 3D")]
     [SerializeField] private Transform orientationRoot;
-    [SerializeField] private Transform leanRoot;
 
-    [Tooltip("Degrés/seconde. Valeur élevée = orientation quasi instantanée.")]
     [SerializeField] private float rotationSpeed = 1080f;
     [SerializeField] private float minMoveMagnitude = 0.05f;
-    [Tooltip("Vitesse minimale pour s'orienter selon la vitesse quand il n'y a pas d'input (glisse, knockback).")]
     [SerializeField] private float minFaceSpeed = 0.5f;
 
-    [Header("Lean / Spring")]
-    [SerializeField] private float maxLeanAngle = 18f;
-    [SerializeField] private float leanStiffness = 140f;
-    [SerializeField] private float leanDamping = 20f;
-    [SerializeField] private float maxLeanVelocity = 500f;
 
-    [Header("Balancier (bob vue du dessus)")]
-    [Tooltip("Cycles de balancier par seconde à pleine vitesse (1 cycle = 2 pas).")]
-    [SerializeField] private float bobFrequency = 2.2f;
-    [Tooltip("Roulis gauche/droite en degrés.")]
-    [SerializeField] private float bobRollAngle = 3f;
-    [Tooltip("Petite oscillation avant/arrière en degrés.")]
-    [SerializeField] private float bobPitchAngle = 1.5f;
-    [Tooltip("Rebond vertical en unités.")]
-    [SerializeField] private float bobHeight = 0.04f;
-    [Tooltip("Vitesse d'apparition / disparition du balancier.")]
-    [SerializeField] private float bobBlendSpeed = 8f;
+    [Header("Panic Pulse")]
+    [SerializeField] private Transform pulseRoot;
+    [SerializeField] private float pulseMinScale = 0.8f;
+    [SerializeField] private float pulseMaxScale = 1.2f;
+    [SerializeField, Min(0.1f)] private float pulseFrequencyStart = 2f;
+    [SerializeField, Min(0.1f)] private float pulseFrequencyEnd = 5f;
+    [SerializeField, Min(0.1f)] private float pulseBlendSpeed = 6f;
 
-    // =====================================================================
     // Animation (états de l'Animator joués par CrossFade : aucune transition à créer)
-    // =====================================================================
-
+ 
     [Header("Animation (noms des états dans l'Animator Controller)")]
     [SerializeField] private Animator animator;
     [SerializeField] private string idleState = "Idle";
@@ -212,19 +179,14 @@ public class PlayerFeedbackController : MonoBehaviour
     [SerializeField] private string pushState = "Push";
     [SerializeField] private string deathState = "Death";
     [SerializeField, Min(0f)] private float crossFadeTime = 0.1f;
-    [Tooltip("Durée pendant laquelle l'animation Push est maintenue après un tag.")]
     [SerializeField, Min(0.05f)] private float pushDuration = 0.35f;
-    [Tooltip("Vitesse horizontale au-delà de laquelle le joueur est considéré en mouvement.")]
     [SerializeField, Min(0f)] private float moveSpeedThreshold = 0.3f;
 
-    // =====================================================================
     // VFX
-    // =====================================================================
 
     [Header("VFX - Boucles")]
     [SerializeField] private LoopVfx walkVfx = new LoopVfx();
     [SerializeField] private LoopVfx panicVfx = new LoopVfx();
-    [Tooltip("Un porteur de bombe à moins de cette distance déclenche les panic particles chez un joueur sans bombe.")]
     [SerializeField, Min(0f)] private float dangerRadius = 3f;
 
     [Header("VFX - Bombe (objet optionnel)")]
@@ -237,12 +199,9 @@ public class PlayerFeedbackController : MonoBehaviour
     [SerializeField] private Vector3 explosionLocalEulerAngles;
     [SerializeField, Min(0.1f)] private float explosionLifetime = 5f;
 
-    // =====================================================================
     // Audio
-    // =====================================================================
 
     [Header("Audio")]
-    [Tooltip("AudioSource modèle : sert à copier Mixer Group, Spatial Blend (mettre 0 = 2D) et Priority.")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private Sfx walkSfx = new Sfx { cooldown = 0.12f };
     [SerializeField] private Sfx panicSfx = new Sfx { cooldown = 0.3f };
@@ -251,33 +210,42 @@ public class PlayerFeedbackController : MonoBehaviour
     [SerializeField] private Sfx explosionSfx = new Sfx { cooldown = 0f, interruptPrevious = false };
 
     [Header("Audio - Cadences")]
-    [Tooltip("Intervalle entre deux pas à vitesse faible.")]
     [SerializeField, Min(0.05f)] private float stepIntervalSlow = 0.45f;
-    [Tooltip("Intervalle entre deux pas à vitesse max.")]
     [SerializeField, Min(0.05f)] private float stepIntervalFast = 0.25f;
-    [Tooltip("Intervalle du Panic SFX pendant un déplacement en panique.")]
     [SerializeField, Min(0.05f)] private float panicSfxInterval = 0.6f;
-    [Tooltip("Intervalle du clic de bombe, calé sur le timer du personnage.")]
     [SerializeField, Min(0.05f)] private float clickInterval = 1f;
 
-    // =====================================================================
     // UI
-    // =====================================================================
 
     [Header("Bomb Timer UI")]
-    [SerializeField] private TMP_Text bombTimerText;
 
-    // =====================================================================
+    [SerializeField] private TMP_Text bombTimerText;
+    [SerializeField] private Transform timerAnchor;
+    [SerializeField] private Vector3 timerLocalOffset = new Vector3(0f, 2f, 0f);
+    [SerializeField] private Vector3 timerWorldOffset = Vector3.zero;
+    [SerializeField] private bool followHeight = false;
+    [SerializeField] private float timerHeight = 2.5f;
+    [SerializeField] private bool matchCameraRotation = true;
+    [SerializeField] private Vector3 timerFixedEuler = new Vector3(90f, 0f, 0f);
+
     // État interne
-    // =====================================================================
 
     private HotPotatoCharacter _owner;
+    private Camera _cam;
 
     private float _leanAngle;
     private float _leanVelocity;
     private Vector3 _leanBasePosition;
     private float _bobPhase;
     private float _bobBlend;
+
+    private const float TwoPi = Mathf.PI * 2f;
+    private Vector3 _pulseBaseScale = Vector3.one;
+    private float _pulsePhase;
+    private float _pulseBlend;
+    private float _pulseScale = 1f;
+    private bool _wasPanic;
+    private float _panicStartBombTime = 1f;
 
     private bool _isMoving;
     private bool _isDead;
@@ -300,7 +268,7 @@ public class PlayerFeedbackController : MonoBehaviour
         _owner = GetComponentInParent<HotPotatoCharacter>();
 
         if (orientationRoot == null) orientationRoot = transform;
-        if (leanRoot != null) _leanBasePosition = leanRoot.localPosition;
+        if (pulseRoot != null) _pulseBaseScale = pulseRoot.localScale;
 
         if (animator == null) animator = GetComponentInChildren<Animator>();
         if (animator != null) animator.applyRootMotion = false;   // le Rigidbody pilote la position
@@ -325,6 +293,71 @@ public class PlayerFeedbackController : MonoBehaviour
         tagSfx.Init(transform, audioSource);
         clickSfx.Init(transform, audioSource);
         explosionSfx.Init(transform, audioSource);
+    }
+
+    // LateUpdate : s'exécute après UpdateFeedback (lean/bob) ET après l'Animator,
+    // donc l'ancre de la tête est dans sa pose finale de la frame.
+    private void LateUpdate()
+    {
+        // Appliqué ici pour l'emporter sur un éventuel curve de scale dans l'Animator.
+        if (!_isDead && pulseRoot != null)
+            pulseRoot.localScale = _pulseBaseScale * _pulseScale;
+
+        UpdateTimerTextPlacement();
+    }
+
+    private void UpdatePulse(bool panic, float bombTime, float deltaTime)
+    {
+        if (panic)
+        {
+            if (!_wasPanic)
+            {
+                _wasPanic = true;
+                _panicStartBombTime = Mathf.Max(0.01f, bombTime);
+                _pulsePhase = 0f;   // sin(0) = 0 -> échelle 1 à l'entrée, pas de saut
+            }
+
+            // La cadence accélère de pulseFrequencyStart à pulseFrequencyEnd jusqu'à l'explosion.
+            float progress = 1f - Mathf.Clamp01(bombTime / _panicStartBombTime);
+            float frequency = Mathf.Lerp(pulseFrequencyStart, pulseFrequencyEnd, progress);
+            _pulsePhase = (_pulsePhase + TwoPi * frequency * deltaTime) % TwoPi;
+        }
+        else
+        {
+            _wasPanic = false;
+        }
+
+        _pulseBlend = Mathf.MoveTowards(_pulseBlend, panic ? 1f : 0f, pulseBlendSpeed * deltaTime);
+
+        float wave = 0.5f + 0.5f * Mathf.Sin(_pulsePhase);
+        float pulseScale = Mathf.Lerp(pulseMinScale, pulseMaxScale, wave);
+        _pulseScale = Mathf.Lerp(1f, pulseScale, _pulseBlend);
+    }
+
+    private void UpdateTimerTextPlacement()
+    {
+        if (bombTimerText == null) return;
+
+        // Position : on suit la tête (donc l'inclinaison et le balancier) mais uniquement en position.
+        Vector3 head;
+        if (timerAnchor != null) head = timerAnchor.position;
+        else head = transform.TransformPoint(timerLocalOffset);
+
+        float y = followHeight ? head.y : transform.position.y + timerHeight;
+
+        Transform t = bombTimerText.transform;
+        t.position = new Vector3(head.x, y, head.z) + timerWorldOffset;
+
+        // Rotation : jamais héritée du personnage.
+        if (matchCameraRotation)
+        {
+            if (_cam == null) _cam = Camera.main;
+            t.rotation = _cam != null ? _cam.transform.rotation : Quaternion.Euler(timerFixedEuler);
+        }
+        else
+        {
+            t.rotation = Quaternion.Euler(timerFixedEuler);
+        }
     }
 
     private static int Hash(string stateName) => Animator.StringToHash(stateName);
@@ -367,7 +400,7 @@ public class PlayerFeedbackController : MonoBehaviour
 
         UpdateMovingFlag(speed);
         Orient(moveInput, flatVelocity, deltaTime);
-        Lean(moveInput, speed01, deltaTime);
+        UpdatePulse(hasBomb && isPanic, bombTime, deltaTime);
 
         bool walking = _isMoving && isGrounded;
         bool danger = !hasBomb && IsBombHolderNearby();
@@ -413,6 +446,11 @@ public class PlayerFeedbackController : MonoBehaviour
         if (_isDead) return;
         _isDead = true;
 
+        // Fin du battement : on rend la main à l'animation de mort.
+        _pulseScale = 1f;
+        _pulseBlend = 0f;
+        if (pulseRoot != null) pulseRoot.localScale = _pulseBaseScale;
+
         walkVfx.Set(false);
         panicVfx.Set(false);
 
@@ -429,7 +467,7 @@ public class PlayerFeedbackController : MonoBehaviour
     }
 
     // =====================================================================
-    // Visuel : orientation, lean, balancier
+    // Visuel : orientation
     // =====================================================================
 
     private void UpdateMovingFlag(float speed)
@@ -459,38 +497,6 @@ public class PlayerFeedbackController : MonoBehaviour
             targetRotation,
             rotationSpeed * deltaTime
         );
-    }
-
-    private void Lean(Vector2 moveInput, float speed01, float deltaTime)
-    {
-        if (leanRoot == null) return;
-
-        // Pas de ressort stable même si le framerate chute.
-        float dt = Mathf.Min(deltaTime, 1f / 30f);
-
-        // --- Inclinaison vers l'avant (le Lean est enfant de l'Orientation : "avant" = direction de déplacement)
-        float inputMagnitude = Mathf.Clamp01(moveInput.magnitude);
-        float lean01 = Mathf.Clamp01(Mathf.Max(inputMagnitude, speed01));
-        float targetLean = lean01 * maxLeanAngle;
-
-        float springAcceleration = leanStiffness * (targetLean - _leanAngle) - leanDamping * _leanVelocity;
-        _leanVelocity += springAcceleration * dt;
-        _leanVelocity = Mathf.Clamp(_leanVelocity, -maxLeanVelocity, maxLeanVelocity);
-        _leanAngle += _leanVelocity * dt;
-
-        // --- Balancier léger, proportionnel à la vitesse
-        float bobTarget = _isMoving ? speed01 : 0f;
-        _bobBlend = Mathf.MoveTowards(_bobBlend, bobTarget, bobBlendSpeed * dt);
-
-        const float Tau = Mathf.PI * 2f;
-        _bobPhase = (_bobPhase + Tau * bobFrequency * speed01 * dt) % Tau;
-
-        float roll = Mathf.Sin(_bobPhase) * bobRollAngle * _bobBlend;
-        float pitchBob = Mathf.Cos(_bobPhase * 2f) * bobPitchAngle * _bobBlend;
-        float vertical = Mathf.Abs(Mathf.Sin(_bobPhase)) * bobHeight * _bobBlend;
-
-        leanRoot.localRotation = Quaternion.Euler(_leanAngle + pitchBob, 0f, roll);
-        leanRoot.localPosition = _leanBasePosition + Vector3.up * vertical;
     }
 
     // =====================================================================
