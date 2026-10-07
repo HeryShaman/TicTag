@@ -3,83 +3,316 @@ using UnityEngine.InputSystem;
 
 public class InputReader : MonoBehaviour
 {
-    [Header("Input Actions")]
-    [SerializeField] private InputActionReference move;
+    public const int KeyboardPlayerCount = 2;
+    public const int MaxGamepads = 3;
+    public const int PlayersPerGamepad = 2;
 
-    [Header("Player")]
-    [Tooltip("0-1 = clavier (ZQSD / flèches), 2-3 = manette 0, 4-5 = manette 1, 6-7 = manette 2 …")]
-    [SerializeField, Range(0, 7)] private int playerIndex;
+    // 2 joueurs clavier + 3 manettes * 2 joueurs
+    public const int PlayerCount = KeyboardPlayerCount + MaxGamepads * PlayersPerGamepad;
 
-    public Vector2 MoveDirection => moveAction != null ? moveAction.ReadValue<Vector2>() : Vector2.zero;
-    public int CurrentDevice { get; private set; }
+    [Header("Deadzone manettes")]
+    [Range(0f, 0.5f)]
+    public float stickDeadzone = 0.15f;
 
-    private InputAction moveAction;
-    private int lastAppliedIndex = -1;
+    private Gamepad[] _gamepads = new Gamepad[MaxGamepads];
 
     private void OnEnable()
     {
-        ApplyPlayerIndex();
+        InputSystem.onDeviceChange += OnDeviceChange;
+        RefreshGamepads();
     }
 
     private void OnDisable()
     {
-        DisposeActions();
+        InputSystem.onDeviceChange -= OnDeviceChange;
     }
 
-    private void OnDestroy()
+    private void OnDeviceChange(InputDevice device, InputDeviceChange change)
     {
-        DisposeActions();
-    }
-
-    private void Update()
-    {
-        // Détection d'un changement d'index en Play mode
-        if (playerIndex != lastAppliedIndex)
-            ApplyPlayerIndex();
-    }
-
-    /// <summary>Réassigne l'action au device/groupe correspondant à l'index courant.</summary>
-    public void ApplyPlayerIndex()
-    {
-        DisposeActions();
-
-        (InputDevice device, string group) = ResolveSlot(playerIndex);
-
-        if (device == null)
+        if (device is Gamepad)
         {
-            Debug.LogWarning($"[InputReader] Aucun device trouvé pour l'index {playerIndex} sur {name}.", this);
-            lastAppliedIndex = playerIndex;
-            return;
+            RefreshGamepads();
+        }
+    }
+
+    private void RefreshGamepads()
+    {
+        for (int i = 0; i < MaxGamepads; i++)
+        {
+            _gamepads[i] = null;
         }
 
-        CurrentDevice = device is Gamepad ? 1 : 0;
+        var allGamepads = Gamepad.all;
+        int count = Mathf.Min(MaxGamepads, allGamepads.Count);
 
-        moveAction = move.action.Clone();
-        moveAction.bindingMask = InputBinding.MaskByGroup(group);
-        moveAction.Enable();
-
-        lastAppliedIndex = playerIndex;
+        for (int i = 0; i < count; i++)
+        {
+            _gamepads[i] = allGamepads[i];
+        }
     }
 
-    private void DisposeActions()
+    private bool IsValidPlayerIndex(int playerIndex)
     {
-        if (moveAction == null) return;
-        moveAction.Disable();
-        moveAction.Dispose();
-        moveAction = null;
+        return playerIndex >= 0 && playerIndex < PlayerCount;
     }
 
-    private static (InputDevice, string) ResolveSlot(int index)
+    private Gamepad GetGamepadForPlayer(int playerIndex)
     {
-        if (index == 0) return (Keyboard.current, "KbLeft");
-        if (index == 1) return (Keyboard.current, "KbRight");
+        if (playerIndex < KeyboardPlayerCount)
+        {
+            return null;
+        }
 
-        int gamepadIndex = (index - 2) / 2;
-        bool isLeft = (index - 2) % 2 == 0;
+        int gamepadIndex = (playerIndex - KeyboardPlayerCount) / PlayersPerGamepad;
 
-        if (Gamepad.all.Count <= gamepadIndex)
-            return (null, null);
+        if (gamepadIndex < 0 || gamepadIndex >= _gamepads.Length)
+        {
+            return null;
+        }
 
-        return (Gamepad.all[gamepadIndex], isLeft ? "GpLeft" : "GpRight");
+        return _gamepads[gamepadIndex];
+    }
+
+    // ---------------------------------------------------------------
+    // MOVE
+    // ---------------------------------------------------------------
+
+    public Vector2 GetMove(int playerIndex)
+    {
+        if (!IsValidPlayerIndex(playerIndex))
+        {
+            return Vector2.zero;
+        }
+
+        // Clavier joueur 0
+        if (playerIndex == 0)
+        {
+            return ApplyDeadzone(ReadKeyboardPlayer0());
+        }
+
+        // Clavier joueur 1
+        if (playerIndex == 1)
+        {
+            return ApplyDeadzone(ReadKeyboardPlayer1());
+        }
+
+        // Manettes
+        int gamepadIndex = (playerIndex - KeyboardPlayerCount) / PlayersPerGamepad;
+        int stickIndex = (playerIndex - KeyboardPlayerCount) % PlayersPerGamepad;
+
+        if (gamepadIndex < 0 || gamepadIndex >= _gamepads.Length)
+        {
+            return Vector2.zero;
+        }
+
+        Gamepad gamepad = _gamepads[gamepadIndex];
+
+        if (gamepad == null)
+        {
+            return Vector2.zero;
+        }
+
+        Vector2 stickValue = stickIndex == 0
+            ? gamepad.leftStick.ReadValue()
+            : gamepad.rightStick.ReadValue();
+
+        return ApplyDeadzone(stickValue);
+    }
+
+    private Vector2 ReadKeyboardPlayer0()
+    {
+        Keyboard keyboard = Keyboard.current;
+
+        if (keyboard == null)
+        {
+            return Vector2.zero;
+        }
+
+        Vector2 move = Vector2.zero;
+
+        // ZQSD + WASD
+        if (keyboard[Key.Z].isPressed || keyboard[Key.W].isPressed)
+        {
+            move.y += 1f;
+        }
+
+        if (keyboard[Key.S].isPressed)
+        {
+            move.y -= 1f;
+        }
+
+        if (keyboard[Key.Q].isPressed || keyboard[Key.A].isPressed)
+        {
+            move.x -= 1f;
+        }
+
+        if (keyboard[Key.D].isPressed)
+        {
+            move.x += 1f;
+        }
+
+        return move.normalized;
+    }
+
+    private Vector2 ReadKeyboardPlayer1()
+    {
+        Keyboard keyboard = Keyboard.current;
+
+        if (keyboard == null)
+        {
+            return Vector2.zero;
+        }
+
+        Vector2 move = Vector2.zero;
+
+        if (keyboard[Key.UpArrow].isPressed)
+        {
+            move.y += 1f;
+        }
+
+        if (keyboard[Key.DownArrow].isPressed)
+        {
+            move.y -= 1f;
+        }
+
+        if (keyboard[Key.LeftArrow].isPressed)
+        {
+            move.x -= 1f;
+        }
+
+        if (keyboard[Key.RightArrow].isPressed)
+        {
+            move.x += 1f;
+        }
+
+        return move.normalized;
+    }
+
+    private Vector2 ApplyDeadzone(Vector2 value)
+    {
+        if (value.sqrMagnitude < stickDeadzone * stickDeadzone)
+        {
+            return Vector2.zero;
+        }
+
+        return Vector2.ClampMagnitude(value, 1f);
+    }
+
+    // ---------------------------------------------------------------
+    // MENU / INTERACTION
+    // ---------------------------------------------------------------
+
+    // Bouton pour confirmer / interagir
+    public bool GetConfirmPressed(int playerIndex)
+    {
+        if (!IsValidPlayerIndex(playerIndex))
+        {
+            return false;
+        }
+
+        Keyboard keyboard = Keyboard.current;
+
+        // Joueur clavier 0
+        if (playerIndex == 0)
+        {
+            if (keyboard == null)
+            {
+                return false;
+            }
+
+            return keyboard[Key.E].wasPressedThisFrame || keyboard[Key.Space].wasPressedThisFrame;
+        }
+
+        // Joueur clavier 1
+        if (playerIndex == 1)
+        {
+            if (keyboard == null)
+            {
+                return false;
+            }
+
+            return keyboard[Key.Enter].wasPressedThisFrame || keyboard[Key.NumpadEnter].wasPressedThisFrame;
+        }
+
+        // Manettes
+        Gamepad gamepad = GetGamepadForPlayer(playerIndex);
+
+        if (gamepad == null)
+        {
+            return false;
+        }
+
+        return gamepad.buttonSouth.wasPressedThisFrame;
+    }
+
+    // Bouton pour revenir en arrière
+    public bool GetBackPressed(int playerIndex)
+    {
+        if (!IsValidPlayerIndex(playerIndex))
+        {
+            return false;
+        }
+
+        Keyboard keyboard = Keyboard.current;
+
+        // Joueur clavier 0
+        if (playerIndex == 0)
+        {
+            if (keyboard == null)
+            {
+                return false;
+            }
+
+            return keyboard[Key.Escape].wasPressedThisFrame;
+        }
+
+        // Joueur clavier 1
+        if (playerIndex == 1)
+        {
+            if (keyboard == null)
+            {
+                return false;
+            }
+
+            return keyboard[Key.Backspace].wasPressedThisFrame || keyboard[Key.RightShift].wasPressedThisFrame;
+        }
+
+        // Manettes
+        Gamepad gamepad = GetGamepadForPlayer(playerIndex);
+
+        if (gamepad == null)
+        {
+            return false;
+        }
+
+        return gamepad.buttonEast.wasPressedThisFrame;
+    }
+
+    // Pratique pour un menu global : n'importe quel joueur peut confirmer
+    public bool GetAnyConfirmPressed()
+    {
+        for (int i = 0; i < PlayerCount; i++)
+        {
+            if (GetConfirmPressed(i))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Pratique pour un menu global : n'importe quel joueur peut revenir en arrière
+    public bool GetAnyBackPressed()
+    {
+        for (int i = 0; i < PlayerCount; i++)
+        {
+            if (GetBackPressed(i))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

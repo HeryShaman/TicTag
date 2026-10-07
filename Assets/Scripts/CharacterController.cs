@@ -1,76 +1,411 @@
+using System;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
-public class CharacterController : MonoBehaviour
+public class HotPotatoCharacter : MonoBehaviour
 {
-    [Header("References")]
+    public enum MovementState { NoBomb, BombNormal, BombPanic }
+
+    /// <summary>
+    /// Trois paramètres par état.
+    /// Temps pour atteindre la vitesse max  ≈ speed / acceleration
+    /// Temps d'arrêt (lâcher le stick)      ≈ speed / friction
+    /// Distance de glisse                   ≈ speed² / (2 * friction)
+    /// </summary>
+    [Serializable]
+    public class MovementProfile
+    {
+        [Min(0f)] public float speed = 6f;
+        [Min(0f)] public float acceleration = 50f;
+        [Min(0f)] public float friction = 45f;
+
+        public MovementProfile() { }
+        public MovementProfile(float speed, float acceleration, float friction)
+        {
+            this.speed = speed;
+            this.acceleration = acceleration;
+            this.friction = friction;
+        }
+    }
+
+    [Header("Player")]
+    [SerializeField] private int playerIndex = 0;
     [SerializeField] private InputReader inputReader;
-    [Tooltip("Transform enfant qui porte le visuel et qui tourne vers la direction de mouvement.")]
-    [SerializeField] private Transform visual;
 
-    [Header("Movement Settings")]
-    [SerializeField] private float moveSpeed = 5f;
-    [SerializeField] private float acceleration = 10f;
-    [SerializeField] private float friction = 8f;
+    [Header("Movement")]
+    [SerializeField] private MovementProfile NormalSpeed = new MovementProfile(6f, 50f, 45f);
+    [SerializeField] private MovementProfile BombSpeed = new MovementProfile(7.5f, 45f, 30f);
+    [SerializeField] private MovementProfile PanicSpeed = new MovementProfile(9.5f, 25f, 14f);
 
-    [Header("Rotation Settings")]
-    [SerializeField] private float rotationSpeed = 15f;
-
-    [Header("Ground Check")]
+    [Header("Gravity / Ground")]
+    [Tooltip("Multiplicateur appliqué à Physics.gravity.y")]
+    [SerializeField] private float gravityScale = 2f;
+    [Tooltip("Vitesse de chute maximale (valeur positive). Empêche d'atteindre -100.")]
+    [SerializeField] private float maxFallSpeed = 20f;
+    [Tooltip("Layers considérés comme sol. NE DOIT PAS contenir le layer des joueurs.")]
+    [SerializeField] private LayerMask groundMask;
+    [SerializeField] private float groundCheckRadius = 0.3f;
+    [Tooltip("Distance sous le bas du collider dans laquelle le sol est détecté.")]
     [SerializeField] private float groundCheckDistance = 0.1f;
-    [SerializeField] private float groundCheckOffset = 0.1f;
-    [SerializeField] private LayerMask groundLayer;
 
-    private Rigidbody rb;
-    private bool isGrounded;
+    [Header("Bomb")]
+    [SerializeField] private bool startWithBomb = false;
+    [SerializeField] private float bombDuration = 10f;
+    [SerializeField] private float transferCooldown = 0.4f;
+    [Tooltip("Panique quand le temps restant <= bombDuration * cette valeur (0.5 = moitié du timer).")]
+    [SerializeField, Range(0.05f, 0.95f)] private float panicThreshold = 0.5f;
+
+    [Header("Speed Boost")]
+    [SerializeField, Min(0f)] private float receiveBoostDuration = 0.5f;
+    [SerializeField, Min(1f)] private float receiveBoostSpeedMultiplier = 1.35f;
+    [SerializeField, Min(1f)] private float receiveBoostAccelerationMultiplier = 1.5f;
+
+    [Header("Knockback")]
+    [Tooltip("Vitesse horizontale imposée à la victime (unités/s).")]
+    [SerializeField, Min(0f)] private float knockbackSpeed = 14f;
+    [Tooltip("Durée pendant laquelle le contrôle de la victime est réduit.")]
+    [SerializeField, Min(0f)] private float knockbackControlLockTime = 0.25f;
+    [Tooltip("Part de l'accélération conservée pendant ce temps (0 = aucun contrôle, 1 = normal).")]
+    [SerializeField, Range(0f, 1f)] private float controlDuringKnockback = 0.15f;
+
+    [Header("Feedback")]
+    [SerializeField] private PlayerFeedbackController feedback;
+
+    // ---------- État public ----------
+    public bool IsAlive { get; private set; } = true;
+    public bool HasBomb { get; private set; }
+    public bool IsPanic { get; private set; }
+    public bool IsGrounded { get; private set; }
+    public float BombTime { get; private set; }
+    public float BombDuration => bombDuration;
+    public int PlayerIndex => playerIndex;
+    public MovementState State => !HasBomb ? MovementState.NoBomb
+                                : IsPanic ? MovementState.BombPanic
+                                : MovementState.BombNormal;
+
+    /// <summary>Déclenché une fois à l'entrée en panique (pour VFX/SFX/anim).</summary>
+    public event Action<HotPotatoCharacter> PanicStarted;
+
+    // ---------- Interne ----------
+    private Rigidbody _rb;
+    private Collider _col;
+    private readonly Collider[] _groundHits = new Collider[8];
+
+    private Vector2 _moveInput;
+    private Vector3 _horizontalVelocity;   // vitesse XZ résultante (pour le feedback)
+    private Vector3 _commandedVelocity;    // vitesse XZ envoyée au Rigidbody au dernier FixedUpdate
+    private float _verticalVelocity;
+
+    private float _lastTransferTime = -999f;
+    private float _boostTimer;
+    private float _knockbackTimer;
+    private bool _hasPendingKnockback;
+    private Vector3 _pendingKnockback;
+
+    private MovementProfile CurrentProfile =>
+        !HasBomb ? NormalSpeed : (IsPanic ? PanicSpeed : BombSpeed);
+
+    private float CurrentMaxSpeed =>
+        CurrentProfile.speed * (_boostTimer > 0f ? receiveBoostSpeedMultiplier : 1f);
+
+    // =====================================================================
+    // Cycle de vie
+    // =====================================================================
 
     private void Awake()
     {
-        rb = GetComponent<Rigidbody>();
+        _rb = GetComponent<Rigidbody>();
+        _col = GetComponent<Collider>();
+        if (_col == null) _col = GetComponentInChildren<Collider>();
+
+        // Gravité gérée par le script (vitesse de chute plafonnée, Y = 0 au sol).
+        _rb.useGravity = false;
+        _rb.interpolation = RigidbodyInterpolation.Interpolate;
+        _rb.linearDamping = 0f;                       // aucune friction cachée
+        _rb.constraints = RigidbodyConstraints.FreezeRotation;
+
+        if (inputReader == null)
+            inputReader = FindFirstObjectByType<InputReader>();
+
+        if (feedback == null)
+            feedback = GetComponentInChildren<PlayerFeedbackController>();
+
+        if (groundMask.value == 0)
+            Debug.LogWarning($"[{name}] groundMask est vide : le personnage tombera indéfiniment.", this);
+    }
+
+    private void Start()
+    {
+        if (startWithBomb)
+            ReceiveBomb(false);
+    }
+
+    private void Update()
+    {
+        if (!IsAlive) return;
+
+        bool gameOver = GameManager.Instance != null &&
+                        GameManager.Instance.CurrentState == GameManager.GameState.GameOver;
+
+        _moveInput = (!gameOver && inputReader != null)
+            ? inputReader.GetMove(playerIndex)
+            : Vector2.zero;
+
+        if (!gameOver && HasBomb)
+        {
+            TickBomb(Time.deltaTime);
+            if (!IsAlive) return;   // a explosé pendant le tick
+        }
+
+        if (feedback != null)
+        {
+            feedback.UpdateFeedback(
+                _moveInput,
+                _horizontalVelocity,
+                CurrentMaxSpeed,
+                HasBomb,
+                BombTime,
+                bombDuration,
+                Time.deltaTime
+            );
+        }
     }
 
     private void FixedUpdate()
     {
-        if (inputReader == null) return;
-
-        Vector2 moveInput = inputReader.MoveDirection;
-
-        isGrounded = Physics.Raycast(
-            transform.position + Vector3.up * groundCheckOffset,
-            Vector3.down,
-            groundCheckDistance + groundCheckOffset,
-            groundLayer);
-
-        Vector3 moveDirection = new Vector3(moveInput.x, 0f, moveInput.y).normalized;
-
-        Vector3 currentVelocity = rb.linearVelocity;
-        Vector3 horizontalVelocity = new Vector3(currentVelocity.x, 0f, currentVelocity.z);
-
-        if (moveInput.sqrMagnitude > 0.01f)
+        if (!IsAlive)
         {
-            Vector3 targetVelocity = moveDirection * moveSpeed;
-            horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVelocity, acceleration * Time.fixedDeltaTime);
-        }
-        else if (isGrounded)
-        {
-            horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, Vector3.zero, friction * Time.fixedDeltaTime);
+            _rb.linearVelocity = Vector3.zero;
+            return;
         }
 
-        rb.linearVelocity = new Vector3(horizontalVelocity.x, currentVelocity.y, horizontalVelocity.z);
+        float dt = Time.fixedDeltaTime;
 
-        if (isGrounded && rb.linearVelocity.y > 0f)
+        // On repart de la vitesse réelle : les collisions (murs, joueurs) sont ainsi respectées
+        // et le personnage ne "pousse" pas contre un mur avec une vitesse fantôme.
+        Vector3 rbVel = _rb.linearVelocity;
+        Vector3 velocity = new Vector3(rbVel.x, 0f, rbVel.z);
+
+        if (_hasPendingKnockback)
         {
-            rb.linearVelocity = new Vector3(rb.linearVelocity.x, -1f, rb.linearVelocity.z);
+            velocity = _pendingKnockback;
+            _knockbackTimer = knockbackControlLockTime;
+            _hasPendingKnockback = false;
         }
 
-        // Rotation visuelle vers la direction de mouvement
-        if (visual != null && moveDirection.sqrMagnitude > 0.001f)
+        if (_boostTimer > 0f) _boostTimer -= dt;
+        if (_knockbackTimer > 0f) _knockbackTimer -= dt;
+
+        velocity = ApplyHorizontalMovement(velocity, dt);
+        _verticalVelocity = ComputeVerticalVelocity(dt);
+
+        _commandedVelocity = velocity;
+        _horizontalVelocity = velocity;
+        _rb.linearVelocity = new Vector3(velocity.x, _verticalVelocity, velocity.z);
+    }
+
+    // =====================================================================
+    // Mouvement
+    // =====================================================================
+
+    private Vector3 ApplyHorizontalMovement(Vector3 velocity, float dt)
+    {
+        MovementProfile p = CurrentProfile;
+        bool boosted = _boostTimer > 0f;
+
+        float maxSpeed = p.speed * (boosted ? receiveBoostSpeedMultiplier : 1f);
+        float accel = p.acceleration * (boosted ? receiveBoostAccelerationMultiplier : 1f);
+        if (_knockbackTimer > 0f) accel *= controlDuringKnockback;
+
+        Vector3 input = Vector3.ClampMagnitude(new Vector3(_moveInput.x, 0f, _moveInput.y), 1f);
+
+        if (input.sqrMagnitude > 0.0001f)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(moveDirection, Vector3.up);
-            visual.rotation = Quaternion.Slerp(
-                visual.rotation,
-                targetRotation,
-                rotationSpeed * Time.fixedDeltaTime);
+            // Input tenu : accélération vers la vitesse cible (gère aussi les virages).
+            velocity = Vector3.MoveTowards(velocity, input * maxSpeed, accel * dt);
         }
+        else
+        {
+            // Input relâché : la friction freine jusqu'à l'arrêt.
+            velocity = Vector3.MoveTowards(velocity, Vector3.zero, p.friction * dt);
+        }
+
+        return velocity;
+    }
+
+    private float ComputeVerticalVelocity(float dt)
+    {
+        IsGrounded = CheckGrounded();
+
+        // Au sol : Y reste strictement à 0, aucune accumulation.
+        if (IsGrounded && _verticalVelocity <= 0f)
+            return 0f;
+
+        // En l'air : gravité plafonnée.
+        float v = _verticalVelocity + Physics.gravity.y * gravityScale * dt;
+        return Mathf.Max(v, -maxFallSpeed);
+    }
+
+    private bool CheckGrounded()
+    {
+        if (_col == null) return false;
+
+        Bounds b = _col.bounds;
+        Vector3 origin = new Vector3(
+            b.center.x,
+            b.min.y + groundCheckRadius - groundCheckDistance,
+            b.center.z);
+
+        int count = Physics.OverlapSphereNonAlloc(
+            origin, groundCheckRadius, _groundHits, groundMask, QueryTriggerInteraction.Ignore);
+
+        for (int i = 0; i < count; i++)
+        {
+            Collider hit = _groundHits[i];
+            if (hit == null) continue;
+            if (hit.attachedRigidbody == _rb) continue;   // ignore soi-même
+            return true;
+        }
+        return false;
+    }
+
+    // =====================================================================
+    // Bombe
+    // =====================================================================
+
+    private void TickBomb(float dt)
+    {
+        BombTime -= dt;
+
+        if (!IsPanic && BombTime <= bombDuration * panicThreshold)
+            EnterPanic();
+
+        if (BombTime <= 0f)
+            Explode();
+    }
+
+    private void EnterPanic()
+    {
+        IsPanic = true;
+        PanicStarted?.Invoke(this);
+        // Si ton PlayerFeedbackController expose une méthode dédiée, appelle-la ici :
+        // if (feedback != null) feedback.OnPanicStarted();
+    }
+
+    /// <param name="grantBoost">false pour la bombe initiale, true pour un transfert ou une attribution.</param>
+    public void ReceiveBomb(bool grantBoost = true)
+    {
+        if (!IsAlive) return;
+
+        HasBomb = true;
+        IsPanic = false;
+        BombTime = bombDuration;
+
+        // Empêche de redonner instantanément la bombe à celui qui vient de la donner.
+        _lastTransferTime = Time.time;
+
+        if (grantBoost)
+            _boostTimer = receiveBoostDuration;
+
+        if (feedback != null)
+            feedback.OnBombReceived();
+    }
+
+    /// <summary>Impose une vitesse horizontale (direction normalisée en XZ) et réduit le contrôle brièvement.</summary>
+    public void ApplyKnockback(Vector3 direction)
+    {
+        direction.y = 0f;
+        if (direction.sqrMagnitude < 0.0001f) return;
+
+        _pendingKnockback = direction.normalized * knockbackSpeed;
+        _hasPendingKnockback = true;
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        TryTransferBomb(collision.gameObject);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        TryTransferBomb(other.gameObject);
+    }
+
+    private void TryTransferBomb(GameObject other)
+    {
+        if (!IsAlive || !HasBomb) return;
+        if (Time.time < _lastTransferTime + transferCooldown) return;
+        if (other == null) return;
+
+        HotPotatoCharacter target = other.GetComponentInParent<HotPotatoCharacter>();
+        if (target == null || target == this || !target.IsAlive) return;
+
+        // Direction calculée AVANT de perdre la bombe.
+        Vector3 knockDir = GetHeadingDirection(target.transform.position);
+
+        HasBomb = false;
+        IsPanic = false;
+        _boostTimer = 0f;
+        _lastTransferTime = Time.time;
+
+        target.ReceiveBomb(true);       // boost de vitesse temporaire pour le nouveau porteur
+        target.ApplyKnockback(knockDir);
+
+        if (feedback != null)
+            feedback.OnBombTransferred();
+    }
+
+    /// <summary>Direction vers laquelle ce joueur se dirigeait au moment du contact.</summary>
+    private Vector3 GetHeadingDirection(Vector3 fallbackTargetPosition)
+    {
+        Vector3 v = _commandedVelocity; v.y = 0f;
+        if (v.sqrMagnitude > 0.25f)
+            return v.normalized;
+
+        Vector3 input = new Vector3(_moveInput.x, 0f, _moveInput.y);
+        if (input.sqrMagnitude > 0.01f)
+            return input.normalized;
+
+        Vector3 toTarget = fallbackTargetPosition - transform.position; toTarget.y = 0f;
+        return toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : Vector3.forward;
+    }
+
+    private void Explode()
+    {
+        if (!IsAlive) return;
+
+        bool hadBomb = HasBomb;
+
+        IsAlive = false;
+        HasBomb = false;
+        IsPanic = false;
+
+        if (GameManager.Instance != null)
+            GameManager.Instance.OnPlayerExploded(this, hadBomb);
+
+        if (feedback != null)
+            feedback.OnExplosion();
+
+        foreach (Collider col in GetComponentsInChildren<Collider>())
+            col.enabled = false;
+
+        _rb.linearVelocity = Vector3.zero;
+
+        Destroy(gameObject, 0.05f);
+    }
+
+    // =====================================================================
+    // Debug
+    // =====================================================================
+
+    private void OnDrawGizmosSelected()
+    {
+        Collider c = _col != null ? _col : GetComponent<Collider>();
+        if (c == null) return;
+
+        Bounds b = c.bounds;
+        Vector3 origin = new Vector3(b.center.x, b.min.y + groundCheckRadius - groundCheckDistance, b.center.z);
+        Gizmos.color = IsGrounded ? Color.green : Color.red;
+        Gizmos.DrawWireSphere(origin, groundCheckRadius);
     }
 }
