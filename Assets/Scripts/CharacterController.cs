@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
@@ -29,7 +30,7 @@ public class HotPotatoCharacter : MonoBehaviour
     }
 
     [Header("Player")]
-    [SerializeField] private int playerIndex = 0;
+    [Tooltip("Le playerIndex est porté par l'InputReader (même GameObject).")]
     [SerializeField] private InputReader inputReader;
 
     [Header("Movement")]
@@ -68,8 +69,16 @@ public class HotPotatoCharacter : MonoBehaviour
     [Tooltip("Part de l'accélération conservée pendant ce temps (0 = aucun contrôle, 1 = normal).")]
     [SerializeField, Range(0f, 1f)] private float controlDuringKnockback = 0.15f;
 
+    [Header("Death")]
+    [Tooltip("Délai avant destruction : doit couvrir la durée de l'animation de mort.")]
+    [SerializeField, Min(0.05f)] private float destroyDelayAfterDeath = 1.5f;
+
     [Header("Feedback")]
     [SerializeField] private PlayerFeedbackController feedback;
+
+    // ---------- Registre statique (utilisé par le feedback pour détecter le porteur de bombe proche) ----------
+    private static readonly List<HotPotatoCharacter> _all = new List<HotPotatoCharacter>(8);
+    public static IReadOnlyList<HotPotatoCharacter> AllCharacters => _all;
 
     // ---------- État public ----------
     public bool IsAlive { get; private set; } = true;
@@ -78,12 +87,12 @@ public class HotPotatoCharacter : MonoBehaviour
     public bool IsGrounded { get; private set; }
     public float BombTime { get; private set; }
     public float BombDuration => bombDuration;
-    public int PlayerIndex => playerIndex;
+    public int PlayerIndex => inputReader != null ? inputReader.PlayerIndex : -1;
     public MovementState State => !HasBomb ? MovementState.NoBomb
                                 : IsPanic ? MovementState.BombPanic
                                 : MovementState.BombNormal;
 
-    /// <summary>Déclenché une fois à l'entrée en panique (pour VFX/SFX/anim).</summary>
+    /// <summary>Déclenché une fois à l'entrée en panique (utile pour caméra, UI...). Le feedback lit IsPanic directement.</summary>
     public event Action<HotPotatoCharacter> PanicStarted;
 
     // ---------- Interne ----------
@@ -125,13 +134,26 @@ public class HotPotatoCharacter : MonoBehaviour
         _rb.constraints = RigidbodyConstraints.FreezeRotation;
 
         if (inputReader == null)
-            inputReader = FindFirstObjectByType<InputReader>();
+            inputReader = GetComponentInParent<InputReader>();
+
+        if (inputReader == null)
+            Debug.LogError($"[{name}] Aucun InputReader trouvé : ajoute-en un sur ce GameObject.", this);
 
         if (feedback == null)
             feedback = GetComponentInChildren<PlayerFeedbackController>();
 
         if (groundMask.value == 0)
             Debug.LogWarning($"[{name}] groundMask est vide : le personnage tombera indéfiniment.", this);
+    }
+
+    private void OnEnable()
+    {
+        if (!_all.Contains(this)) _all.Add(this);
+    }
+
+    private void OnDisable()
+    {
+        _all.Remove(this);
     }
 
     private void Start()
@@ -148,7 +170,7 @@ public class HotPotatoCharacter : MonoBehaviour
                         GameManager.Instance.CurrentState == GameManager.GameState.GameOver;
 
         _moveInput = (!gameOver && inputReader != null)
-            ? inputReader.GetMove(playerIndex)
+            ? inputReader.GetMove()
             : Vector2.zero;
 
         if (!gameOver && HasBomb)
@@ -164,6 +186,8 @@ public class HotPotatoCharacter : MonoBehaviour
                 _horizontalVelocity,
                 CurrentMaxSpeed,
                 HasBomb,
+                IsPanic,
+                IsGrounded,
                 BombTime,
                 bombDuration,
                 Time.deltaTime
@@ -288,8 +312,6 @@ public class HotPotatoCharacter : MonoBehaviour
     {
         IsPanic = true;
         PanicStarted?.Invoke(this);
-        // Si ton PlayerFeedbackController expose une méthode dédiée, appelle-la ici :
-        // if (feedback != null) feedback.OnPanicStarted();
     }
 
     /// <param name="grantBoost">false pour la bombe initiale, true pour un transfert ou une attribution.</param>
@@ -352,7 +374,7 @@ public class HotPotatoCharacter : MonoBehaviour
         target.ApplyKnockback(knockDir);
 
         if (feedback != null)
-            feedback.OnBombTransferred();
+            feedback.OnBombTransferred();   // animation push + Tag SFX
     }
 
     /// <summary>Direction vers laquelle ce joueur se dirigeait au moment du contact.</summary>
@@ -391,7 +413,8 @@ public class HotPotatoCharacter : MonoBehaviour
 
         _rb.linearVelocity = Vector3.zero;
 
-        Destroy(gameObject, 0.05f);
+        // Laisse le temps à l'animation de mort d'être visible.
+        Destroy(gameObject, destroyDelayAfterDeath);
     }
 
     // =====================================================================

@@ -256,6 +256,10 @@ PrefabInstance:
       value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1256404856270337727, guid: 40fb5e2d1b707d92abaca256de93f31a, type: 3}
+      propertyPath: bombDuration
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 1256404856270337727, guid: 40fb5e2d1b707d92abaca256de93f31a, type: 3}
       propertyPath: PanicSpeed.acceleration
       value: 45
       objectReference: {fileID: 0}
@@ -298,6 +302,10 @@ PrefabInstance:
     - target: {fileID: 3573415043277207326, guid: 40fb5e2d1b707d92abaca256de93f31a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3781904382655091291, guid: 40fb5e2d1b707d92abaca256de93f31a, type: 3}
+      propertyPath: playerIndex
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 6832045250792625403, guid: 40fb5e2d1b707d92abaca256de93f31a, type: 3}
       propertyPath: m_Name
@@ -468,6 +476,10 @@ PrefabInstance:
     - target: {fileID: 3573415043277207326, guid: 40fb5e2d1b707d92abaca256de93f31a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3781904382655091291, guid: 40fb5e2d1b707d92abaca256de93f31a, type: 3}
+      propertyPath: playerIndex
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6832045250792625403, guid: 40fb5e2d1b707d92abaca256de93f31a, type: 3}
       propertyPath: m_Name
@@ -907,6 +919,10 @@ PrefabInstance:
     - target: {fileID: 3573415043277207326, guid: 40fb5e2d1b707d92abaca256de93f31a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3781904382655091291, guid: 40fb5e2d1b707d92abaca256de93f31a, type: 3}
+      propertyPath: playerIndex
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 6832045250792625403, guid: 40fb5e2d1b707d92abaca256de93f31a, type: 3}
       propertyPath: m_Name

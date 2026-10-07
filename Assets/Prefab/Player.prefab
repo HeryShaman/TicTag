@@ -49,19 +49,80 @@ MonoBehaviour:
   leanRoot: {fileID: 3680297100063901042}
   rotationSpeed: 720
   minMoveMagnitude: 0.05
+  minFaceSpeed: 0.5
   maxLeanAngle: 18
   leanStiffness: 140
   leanDamping: 20
   maxLeanVelocity: 500
+  bobFrequency: 2.2
+  bobRollAngle: 3
+  bobPitchAngle: 1.5
+  bobHeight: 0.04
+  bobBlendSpeed: 8
   animator: {fileID: 0}
-  speedParameter: Speed
-  bombParameter: HasBomb
-  audioSource: {fileID: 0}
-  bombReceivedClip: {fileID: 0}
-  bombPassedClip: {fileID: 0}
-  explosionClip: {fileID: 0}
+  idleState: Idle
+  moveState: Move
+  idleBombState: IdleBomb
+  moveBombState: MoveBomb
+  idlePanicState: IdlePanic
+  movePanicState: MovePanic
+  pushState: Push
+  deathState: Death
+  crossFadeTime: 0.1
+  pushDuration: 0.2
+  moveSpeedThreshold: 0.3
+  walkVfx:
+    particles: {fileID: 0}
+    space: 1
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+  panicVfx:
+    particles: {fileID: 0}
+    space: 1
+    localPosition: {x: 0, y: 0, z: 0}
+    localEulerAngles: {x: 0, y: 0, z: 0}
+  dangerRadius: 3
   bombActiveVFX: {fileID: 0}
   explosionVFX: {fileID: 0}
+  explosionSpace: 0
+  explosionLocalPosition: {x: 0, y: 0, z: 0}
+  explosionLocalEulerAngles: {x: 0, y: 0, z: 0}
+  explosionLifetime: 5
+  audioSource: {fileID: 0}
+  walkSfx:
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    cooldown: 0.12
+    interruptPrevious: 1
+  panicSfx:
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    cooldown: 0.3
+    interruptPrevious: 1
+  tagSfx:
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    cooldown: 0.2
+    interruptPrevious: 1
+  clickSfx:
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    cooldown: 0.05
+    interruptPrevious: 1
+  explosionSfx:
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    cooldown: 0
+    interruptPrevious: 0
+  stepIntervalSlow: 0.45
+  stepIntervalFast: 0.25
+  panicSfxInterval: 0.6
+  clickInterval: 1
   bombTimerText: {fileID: 3822109081545713307}
 --- !u!1 &3753210152727522540
 GameObject:
@@ -501,6 +562,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 148e6dde7f06b36fb99d9b18c8dbf053, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InputReader
+  playerIndex: 0
   stickDeadzone: 0.15
 --- !u!114 &1256404856270337727
 MonoBehaviour:
@@ -514,7 +576,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b1a109dd1053c59aaa36d5f0b4e5f7b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CharacterController
-  playerIndex: 0
   inputReader: {fileID: 3781904382655091291}
   NormalSpeed:
     speed: 6
@@ -522,12 +583,12 @@ MonoBehaviour:
     friction: 45
   BombSpeed:
     speed: 7.5
-    acceleration: 45
-    friction: 30
+    acceleration: 30
+    friction: 5
   PanicSpeed:
     speed: 9.5
-    acceleration: 25
-    friction: 14
+    acceleration: 10
+    friction: 5
   gravityScale: 2
   maxFallSpeed: 20
   groundMask:
@@ -536,8 +597,8 @@ MonoBehaviour:
   groundCheckRadius: 0.3
   groundCheckDistance: 0.1
   startWithBomb: 0
-  bombDuration: 10
-  transferCooldown: 0.4
+  bombDuration: 5
+  transferCooldown: 0.25
   panicThreshold: 0.5
   receiveBoostDuration: 0.5
   receiveBoostSpeedMultiplier: 1.35
@@ -545,4 +606,5 @@ MonoBehaviour:
   knockbackSpeed: 10
   knockbackControlLockTime: 0.25
   controlDuringKnockback: 0.15
+  destroyDelayAfterDeath: 1.5
   feedback: {fileID: 0}
