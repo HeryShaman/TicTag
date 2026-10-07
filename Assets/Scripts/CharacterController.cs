@@ -7,12 +7,6 @@ public class HotPotatoCharacter : MonoBehaviour
 {
     public enum MovementState { NoBomb, BombNormal, BombPanic }
 
-    /// <summary>
-    /// Trois paramètres par état.
-    /// Temps pour atteindre la vitesse max  ≈ speed / acceleration
-    /// Temps d'arrêt (lâcher le stick)      ≈ speed / friction
-    /// Distance de glisse                   ≈ speed² / (2 * friction)
-    /// </summary>
     [Serializable]
     public class MovementProfile
     {
@@ -39,22 +33,21 @@ public class HotPotatoCharacter : MonoBehaviour
     [SerializeField] private MovementProfile PanicSpeed = new MovementProfile(9.5f, 25f, 14f);
 
     [Header("Gravity / Ground")]
-    [Tooltip("Multiplicateur appliqué à Physics.gravity.y")]
     [SerializeField] private float gravityScale = 2f;
-    [Tooltip("Vitesse de chute maximale (valeur positive). Empêche d'atteindre -100.")]
     [SerializeField] private float maxFallSpeed = 20f;
-    [Tooltip("Layers considérés comme sol. NE DOIT PAS contenir le layer des joueurs.")]
     [SerializeField] private LayerMask groundMask;
     [SerializeField] private float groundCheckRadius = 0.3f;
-    [Tooltip("Distance sous le bas du collider dans laquelle le sol est détecté.")]
     [SerializeField] private float groundCheckDistance = 0.1f;
 
     [Header("Bomb")]
     [SerializeField] private bool startWithBomb = false;
     [SerializeField] private float bombDuration = 10f;
     [SerializeField] private float transferCooldown = 0.4f;
-    [Tooltip("Panique quand le temps restant <= bombDuration * cette valeur (0.5 = moitié du timer).")]
     [SerializeField, Range(0.05f, 0.95f)] private float panicThreshold = 0.5f;
+
+    [Header("Bomb Reduce")]
+    [SerializeField, Min(0f)] private float durationPenaltyPerTag = 1f;
+    [SerializeField, Min(0.5f)] private float minBombDuration = 3f;
 
     [Header("Speed Boost")]
     [SerializeField, Min(0f)] private float receiveBoostDuration = 0.5f;
@@ -62,15 +55,11 @@ public class HotPotatoCharacter : MonoBehaviour
     [SerializeField, Min(1f)] private float receiveBoostAccelerationMultiplier = 1.5f;
 
     [Header("Knockback")]
-    [Tooltip("Vitesse horizontale imposée à la victime (unités/s).")]
     [SerializeField, Min(0f)] private float knockbackSpeed = 14f;
-    [Tooltip("Durée pendant laquelle le contrôle de la victime est réduit.")]
     [SerializeField, Min(0f)] private float knockbackControlLockTime = 0.25f;
-    [Tooltip("Part de l'accélération conservée pendant ce temps (0 = aucun contrôle, 1 = normal).")]
     [SerializeField, Range(0f, 1f)] private float controlDuringKnockback = 0.15f;
 
     [Header("Death")]
-    [Tooltip("Délai avant destruction : doit couvrir la durée de l'animation de mort.")]
     [SerializeField, Min(0.05f)] private float destroyDelayAfterDeath = 1.5f;
 
     [Header("Feedback")]
@@ -86,7 +75,8 @@ public class HotPotatoCharacter : MonoBehaviour
     public bool IsPanic { get; private set; }
     public bool IsGrounded { get; private set; }
     public float BombTime { get; private set; }
-    public float BombDuration => bombDuration;
+    public float BombDuration => _currentBombDuration;
+    public float InitialBombDuration => bombDuration;
     public int PlayerIndex => inputReader != null ? inputReader.PlayerIndex : -1;
     public MovementState State => !HasBomb ? MovementState.NoBomb
                                 : IsPanic ? MovementState.BombPanic
@@ -106,6 +96,7 @@ public class HotPotatoCharacter : MonoBehaviour
     private float _verticalVelocity;
 
     private float _lastTransferTime = -999f;
+    private float _currentBombDuration;    // durée de départ de la bombe actuelle (diminue à chaque touche)
     private float _boostTimer;
     private float _knockbackTimer;
     private bool _hasPendingKnockback;
@@ -126,6 +117,8 @@ public class HotPotatoCharacter : MonoBehaviour
         _rb = GetComponent<Rigidbody>();
         _col = GetComponent<Collider>();
         if (_col == null) _col = GetComponentInChildren<Collider>();
+
+        _currentBombDuration = bombDuration;
 
         // Gravité gérée par le script (vitesse de chute plafonnée, Y = 0 au sol).
         _rb.useGravity = false;
@@ -189,7 +182,7 @@ public class HotPotatoCharacter : MonoBehaviour
                 IsPanic,
                 IsGrounded,
                 BombTime,
-                bombDuration,
+                _currentBombDuration,
                 Time.deltaTime
             );
         }
@@ -301,7 +294,7 @@ public class HotPotatoCharacter : MonoBehaviour
     {
         BombTime -= dt;
 
-        if (!IsPanic && BombTime <= bombDuration * panicThreshold)
+        if (!IsPanic && BombTime <= _currentBombDuration * panicThreshold)
             EnterPanic();
 
         if (BombTime <= 0f)
@@ -315,13 +308,16 @@ public class HotPotatoCharacter : MonoBehaviour
     }
 
     /// <param name="grantBoost">false pour la bombe initiale, true pour un transfert ou une attribution.</param>
-    public void ReceiveBomb(bool grantBoost = true)
+    /// <param name="duration">Durée de départ du timer. Valeur &lt;= 0 : durée initiale (nouvelle bombe).</param>
+    public void ReceiveBomb(bool grantBoost = true, float duration = -1f)
     {
         if (!IsAlive) return;
 
+        _currentBombDuration = duration > 0f ? duration : bombDuration;
+
         HasBomb = true;
         IsPanic = false;
-        BombTime = bombDuration;
+        BombTime = _currentBombDuration;
 
         // Empêche de redonner instantanément la bombe à celui qui vient de la donner.
         _lastTransferTime = Time.time;
@@ -365,12 +361,17 @@ public class HotPotatoCharacter : MonoBehaviour
         // Direction calculée AVANT de perdre la bombe.
         Vector3 knockDir = GetHeadingDirection(target.transform.position);
 
+        // Le timer se réinitialise chez le receveur, mais 1 s plus court à chaque touche (plancher minBombDuration).
+        float nextDuration = Mathf.Min(
+            _currentBombDuration,
+            Mathf.Max(minBombDuration, _currentBombDuration - durationPenaltyPerTag));
+
         HasBomb = false;
         IsPanic = false;
         _boostTimer = 0f;
         _lastTransferTime = Time.time;
 
-        target.ReceiveBomb(true);       // boost de vitesse temporaire pour le nouveau porteur
+        target.ReceiveBomb(true, nextDuration);   // boost de vitesse + timer réinitialisé et réduit
         target.ApplyKnockback(knockDir);
 
         if (feedback != null)
