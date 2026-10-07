@@ -1,12 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-/// <summary>
-/// Un InputReader par joueur : il POSSÈDE le playerIndex (0..7) et lit les contrôles associés.
-/// 0 = clavier ZQSD/WASD, 1 = clavier flèches,
-/// 2..7 = manettes (2 joueurs par manette : stick gauche puis stick droit).
-/// À placer sur le même GameObject que le HotPotatoCharacter.
-/// </summary>
 public class InputReader : MonoBehaviour
 {
     public const int KeyboardPlayerCount = 2;

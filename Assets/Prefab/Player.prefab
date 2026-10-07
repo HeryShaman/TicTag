@@ -552,7 +552,7 @@ MonoBehaviour:
   knockbackControlLockTime: 0.25
   controlDuringKnockback: 0.15
   destroyDelayAfterDeath: 1.5
-  feedback: {fileID: 0}
+  feedback: {fileID: 118696509968011535}
 --- !u!1 &8613421669225973800
 GameObject:
   m_ObjectHideFlags: 0
