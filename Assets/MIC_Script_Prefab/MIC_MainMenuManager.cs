@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -7,6 +8,11 @@ public class MIC_MainMenuManager : MonoBehaviour
     public GameObject mainPanel;
     public GameObject levelSelectPanel;
     public GameObject optionsPanel;
+    public GameObject Button_Option;
+    public GameObject Button_Selection;
+    public GameObject Button_Quit;
+
+
 
     [Header("First Level")]
     public string firstLevelName = "GameScene_1";
@@ -25,11 +31,14 @@ public class MIC_MainMenuManager : MonoBehaviour
     // PANELS
     // =========================
 
+
     public void OpenMainPanel()
     {
+
         mainPanel.SetActive(true);
         levelSelectPanel.SetActive(false);
         optionsPanel.SetActive(false);
+
     }
 
     public void OpenLevelSelect()
@@ -44,6 +53,7 @@ public class MIC_MainMenuManager : MonoBehaviour
         mainPanel.SetActive(false);
         levelSelectPanel.SetActive(false);
         optionsPanel.SetActive(true);
+
     }
 
     // =========================
@@ -64,4 +74,40 @@ public class MIC_MainMenuManager : MonoBehaviour
     {
         Application.Quit();
     }
+
+    //IEnumerator WaitTimeOption()
+    //{
+    //    yield return new WaitForSecondsRealtime(1);
+
+
+    //    mainPanel.SetActive(false);
+    //    levelSelectPanel.SetActive(false);
+    //    optionsPanel.SetActive(true);
+    //    Button_Option.transform.localScale = new Vector3(2, 2, 2);
+    //}
+
+    //IEnumerator WaitTimeSelect()
+    //{
+    //    yield return new WaitForSecondsRealtime(1);
+
+    //    mainPanel.SetActive(false);
+    //    levelSelectPanel.SetActive(true);
+    //    optionsPanel.SetActive(false);
+    //    Button_Selection.transform.localScale = new Vector3(2, 2, 2);
+    //}
+
+
+    //IEnumerator WaitTimeMainMenu()
+    //{
+    //    yield return new WaitForSecondsRealtime(1);
+
+    //    mainPanel.SetActive(true);
+    //    levelSelectPanel.SetActive(false);
+    //    optionsPanel.SetActive(false);
+    //    Button_Option.transform.localScale = new Vector3(2, 2, 2);
+    //    Button_Selection.transform.localScale = new Vector3(2, 2, 2);
+    //    Button_Quit.transform.localScale = new Vector3(2, 2, 2);
+    //}
+
+
 }
