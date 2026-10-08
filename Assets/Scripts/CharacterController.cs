@@ -418,34 +418,8 @@ public class HotPotatoCharacter : MonoBehaviour
         Destroy(gameObject, destroyDelayAfterDeath);
     }
 
-    public void ForceMove(int dir = 0, float amount = 1f) {
-        if (!IsAlive) return;
-
-        switch (dir) {
-            case 0:
-                //RIGHT
-                transform.position += Vector3.right * amount;
-                break;
-
-            case 1:
-                //DOWN
-                transform.position -= Vector3.up * amount;
-                
-                break;
-
-            case 2:
-                //LEFT
-                transform.position -= Vector3.right * amount;
-                break;
-
-            case 3:
-                //UP
-                transform.position += Vector3.up * amount;
-                break;
-
-            default:
-                break;
-        }
+    public void MoveOnConveyor(Vector3 direction) {
+        transform.position += direction;
     }
 
     // =====================================================================
