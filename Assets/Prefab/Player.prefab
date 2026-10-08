@@ -527,15 +527,15 @@ MonoBehaviour:
   NormalSpeed:
     speed: 6
     acceleration: 50
-    friction: 45
+    friction: 50
   BombSpeed:
-    speed: 7.5
-    acceleration: 30
+    speed: 8
+    acceleration: 25
     friction: 5
   PanicSpeed:
-    speed: 9.5
-    acceleration: 10
-    friction: 30
+    speed: 10
+    acceleration: 18.5
+    friction: 1
   gravityScale: 2
   maxFallSpeed: 20
   groundMask:
