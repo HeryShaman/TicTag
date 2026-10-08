@@ -1802,7 +1802,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b20687e874eceeb05887cf276e84d2cf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MainMenu
-  gameSceneName: HeryTestScene
+  gameSceneName: LevelScene2
   firstSelected: {fileID: 0}
   music: {fileID: 353812486}
   menuMusic: {fileID: 8300000, guid: 79894c265c2a71d479afbd366380ae80, type: 3}
@@ -6388,7 +6388,7 @@ MonoBehaviour:
   Button_Option: {fileID: 0}
   Button_Selection: {fileID: 0}
   Button_Quit: {fileID: 0}
-  firstLevelName: HeryTestScene
+  firstLevelName: LevelScene2
 --- !u!224 &1718337567 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 8884161357940188232, guid: 67283dc5c5165be419313f69f0f2bd77, type: 3}
