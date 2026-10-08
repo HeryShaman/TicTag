@@ -1,12 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-/// <summary>
-/// Un InputReader par joueur : il POSSÈDE le playerIndex (0..7) et lit les contrôles associés.
-/// 0 = clavier ZQSD/WASD, 1 = clavier flèches,
-/// 2..7 = manettes (2 joueurs par manette : stick gauche puis stick droit).
-/// À placer sur le même GameObject que le HotPotatoCharacter.
-/// </summary>
 public class InputReader : MonoBehaviour
 {
     public const int KeyboardPlayerCount = 2;
@@ -39,6 +33,7 @@ public class InputReader : MonoBehaviour
     public Vector2 GetMove() => ReadMove(playerIndex, stickDeadzone);
     public bool GetConfirmPressed() => ReadConfirm(playerIndex);
     public bool GetBackPressed() => ReadBack(playerIndex);
+    public bool GetBackHeld() => ReadBackHeld(playerIndex);
 
     // ---------------------------------------------------------------
     // API statique (menus, écran de sélection : on interroge un index sans instance)
@@ -126,6 +121,43 @@ public class InputReader : MonoBehaviour
 
         Gamepad gamepad = GetGamepadForPlayer(index);
         return gamepad != null && gamepad.buttonEast.wasPressedThisFrame;
+    }
+
+    // Bouton retour MAINTENU (menu de sélection : maintenir pour quitter)
+    public static bool ReadBackHeld(int index)
+    {
+        if (!IsValidPlayerIndex(index)) return false;
+
+        if (index < KeyboardPlayerCount)
+        {
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard == null) return false;
+
+            return index == 0
+                ? keyboard[Key.Escape].isPressed
+                : keyboard[Key.Backspace].isPressed || keyboard[Key.RightShift].isPressed;
+        }
+
+        Gamepad gamepad = GetGamepadForPlayer(index);
+        return gamepad != null && gamepad.buttonEast.isPressed;
+    }
+
+    // Pause : Échap / P au clavier, bouton Start sur n'importe quelle manette
+    public static bool GetAnyPausePressed()
+    {
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard != null &&
+            (keyboard[Key.Escape].wasPressedThisFrame || keyboard[Key.P].wasPressedThisFrame))
+        {
+            return true;
+        }
+
+        var pads = Gamepad.all;
+        for (int i = 0; i < pads.Count; i++)
+        {
+            if (pads[i].startButton.wasPressedThisFrame) return true;
+        }
+        return false;
     }
 
     // ---------------------------------------------------------------

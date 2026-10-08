@@ -2,42 +2,15 @@ using UnityEngine;
 
 public class testPsDust : MonoBehaviour
 {
-    public ParticleSystem particleEffect;
+    public ParticleSystem puff;
 
-    void Start()
+    void Update()
     {
-        // Get the ParticleSystem component if it's attached to the GameObject or a child
-        if (particleEffect == null)
-        {
-            particleEffect = GetComponentInChildren<ParticleSystem>();
-        }
+        float x = Input.GetAxisRaw("Horizontal");
+        float y = Input.GetAxisRaw("Vertical");
+        transform.position += new Vector3(x, y, 0) * 5f * Time.deltaTime;
+
+        var em = puff.emission;
+        em.enabled = x != 0 || y != 0;
     }
-
-    public void TriggerEffect()
-    {
-        if (particleEffect != null)
-        {
-            particleEffect.Play();
-        }
-    }
-    //public bool x;
-    //public ParticleSystem dust;
-
-    //void Update()
-    //{
-    //    if (x)
-    //    {
-
-    //        dust.Play();
-    //    }
-
-    //    else if (!x)
-    //    {
-
-    //        dust.Stop();
-
-    //        //dust.Pause();
-    //        //dust.Clear();
-    //    }
-    //}
 }
