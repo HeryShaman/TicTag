@@ -295,6 +295,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3209458085855180747, guid: 2f3153366d45ef34181acb83fd895167, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5498786344002884338, guid: 2f3153366d45ef34181acb83fd895167, type: 3}
       propertyPath: m_Name
       value: MIC_UI Pause
@@ -499,46 +503,14 @@ PrefabInstance:
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
       objectReference: {fileID: 1543050599}
-    - target: {fileID: 1799078392288120591, guid: 1a46d133c3cc7654e8329823960e1c5e, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: PlayGame
-      objectReference: {fileID: 0}
-    - target: {fileID: 1799078392288120591, guid: 1a46d133c3cc7654e8329823960e1c5e, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
-      value: MIC_GameManager, Assembly-CSharp
-      objectReference: {fileID: 0}
     - target: {fileID: 2393380074263073236, guid: 1a46d133c3cc7654e8329823960e1c5e, type: 3}
       propertyPath: m_Name
       value: UI FIN de Proto
-      objectReference: {fileID: 0}
-    - target: {fileID: 2393380074263073236, guid: 1a46d133c3cc7654e8329823960e1c5e, type: 3}
-      propertyPath: m_IsActive
-      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3719781699532346322, guid: 1a46d133c3cc7654e8329823960e1c5e, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
       objectReference: {fileID: 1543050599}
-    - target: {fileID: 3719781699532346322, guid: 1a46d133c3cc7654e8329823960e1c5e, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: ReturnToMenu
-      objectReference: {fileID: 0}
-    - target: {fileID: 3719781699532346322, guid: 1a46d133c3cc7654e8329823960e1c5e, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
-      value: MIC_GameManager, Assembly-CSharp
-      objectReference: {fileID: 0}
-    - target: {fileID: 4398696429937940328, guid: 1a46d133c3cc7654e8329823960e1c5e, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8904206428163137451, guid: 1a46d133c3cc7654e8329823960e1c5e, type: 3}
-      propertyPath: resultUI
-      value: 
-      objectReference: {fileID: 1863493510}
-    - target: {fileID: 8904206428163137451, guid: 1a46d133c3cc7654e8329823960e1c5e, type: 3}
-      propertyPath: menuSceneName
-      value: Menu Principal
-      objectReference: {fileID: 0}
     - target: {fileID: 8991109488073225942, guid: 1a46d133c3cc7654e8329823960e1c5e, type: 3}
       propertyPath: m_LocalPosition.x
       value: -87.6952
@@ -988,16 +960,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   gameCamera: {fileID: 11233042}
+  spawner: {fileID: 0}
   players:
   - {fileID: 272334253}
   - {fileID: 1014600323}
   - {fileID: 1985646640}
   - {fileID: 1583442072}
-  gameTimerText: {fileID: 1376479708}
+  pauseMenu: {fileID: 0}
   preStartDuration: 2
-  nextBombDelay: 60
+  bombAssignDelay: 3
   hitPauseDuration: 0.25
   assignFirstBombImmediately: 1
+  music: {fileID: 0}
+  gameMusic: {fileID: 0}
+  gameOverMusic: {fileID: 0}
+  musicFadeIn: 1
+  pausedMusicVolume: 0.35
+  menuSceneName: MainMenu
 --- !u!4 &1543050598
 Transform:
   m_ObjectHideFlags: 0
