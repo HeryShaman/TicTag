@@ -6,11 +6,20 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/Menu Principal.unity
+    guid: 2c8d5b82ab4f9f54e8489e32c6dbca5b
+  - enabled: 0
+    path: Assets/Scenes/HeryTestScene.unity
+    guid: 5da842e3ed7e65b749b9964d2c2497c3
+  - enabled: 0
+    path: Assets/Scenes/Game.unity
+    guid: bf93543e4160ff1199df4d41f8355aa8
+  - enabled: 0
     path: Assets/Scenes/MainMenu.unity
     guid: 07c0d50069d9475ccb09ce25431535a6
   - enabled: 1
-    path: Assets/Scenes/Game.unity
-    guid: bf93543e4160ff1199df4d41f8355aa8
+    path: Assets/Scenes/Levels/LevelScene2.unity
+    guid: 49aa5393ebe76ad2faab86fa3d65834f
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 289c1b55c9541489481df5cc06664110, type: 3}
   m_UseUCBPForAssetBundles: 0
