@@ -300,11 +300,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 2f3153366d45ef34181acb83fd895167, type: 3}
---- !u!1 &312929523 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 5498786344002884338, guid: 2f3153366d45ef34181acb83fd895167, type: 3}
-  m_PrefabInstance: {fileID: 312929522}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &525147196
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -490,6 +485,10 @@ PrefabInstance:
     - target: {fileID: 2393380074263073236, guid: 1a46d133c3cc7654e8329823960e1c5e, type: 3}
       propertyPath: m_Name
       value: UI FIN de Proto
+      objectReference: {fileID: 0}
+    - target: {fileID: 2393380074263073236, guid: 1a46d133c3cc7654e8329823960e1c5e, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3719781699532346322, guid: 1a46d133c3cc7654e8329823960e1c5e, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
@@ -913,6 +912,11 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1376479706}
   m_CullTransparentMesh: 1
+--- !u!1 &1423053154 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3209458085855180747, guid: 2f3153366d45ef34181acb83fd895167, type: 3}
+  m_PrefabInstance: {fileID: 312929522}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1543050596
 GameObject:
   m_ObjectHideFlags: 0
@@ -991,7 +995,7 @@ MonoBehaviour:
   menuSceneName: Menu Principal
   Scene_Jeu: MIC_Test_Scene
   DEBUF_Fin: 0
-  MIC_UI_PauseMenu: {fileID: 312929523}
+  MIC_UI_PauseMenu: {fileID: 1423053154}
   MIC_UI_FIN: {fileID: 1863493510}
 --- !u!114 &1583442072 stripped
 MonoBehaviour:
