@@ -142,7 +142,7 @@ public class GameManager : MonoBehaviour
         _isPaused = false;
         _isHitPausing = false;
         Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        SceneTransition.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     public void QuitToMenu()
@@ -150,7 +150,7 @@ public class GameManager : MonoBehaviour
         _isPaused = false;
         _isHitPausing = false;
         Time.timeScale = 1f;
-        SceneManager.LoadScene(menuSceneName);
+        SceneTransition.LoadScene(menuSceneName);
     }
 
     // Un seul endroit décide du timeScale : pause et hit-pause ne s'écrasent plus.
